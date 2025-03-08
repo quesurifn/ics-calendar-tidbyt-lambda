@@ -6,6 +6,7 @@ type Event struct {
 	EndTime   int64
 	Location  *string
 	Detail    *EventDetail
+	IsAllDay  bool
 }
 
 type EventDetail struct {
@@ -16,6 +17,7 @@ type EventDetail struct {
 	MinutesUntilEnd   int  `json:"minutesUntilEnd"`
 	HoursToEnd        int  `json:"hoursToEnd"`
 	InProgress        bool `json:"inProgress"`
+	IsAllDay          bool `json:"isAllDay"`
 }
 
 type BaseResponse struct {
@@ -23,10 +25,14 @@ type BaseResponse struct {
 	Error *ErrorResponse `json:"message"`
 }
 
+
+//ShowInProgress and IncludeAllDayEvents are set as pointers so that they can default to true if they are unset
 type IcsRequest struct {
 	ICSUrl         string `json:"icsUrl" validate:"required,url"`
-	ShowInProgress bool   `json:"showInProgress" validate:"boolean"`
 	TZ             string `json:"tz" validate:"required,timezone"`
+	ShowInProgress *bool   `json:"showInProgress" validate:"boolean"`
+	IncludeAllDayEvents *bool `json:"includeAllDayEvents" validate:"boolean"`
+	OnlyShowAllDayEvents bool `json:"onlyShowAllDayEvents" validate:"boolean"`
 }
 
 type ErrorResponse struct {

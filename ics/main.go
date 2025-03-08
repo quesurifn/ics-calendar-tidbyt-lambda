@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
+
 type Response events.APIGatewayProxyResponse
 
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
@@ -29,6 +30,18 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return GetErrorResponseType(err)
 	}
 
+	// Set default for ShowInProgress if not provided
+	if event.ShowInProgress == nil {
+		defaultTrue := true
+		event.ShowInProgress = &defaultTrue
+	}
+
+	// Set default for IncludeAllDayEvents if not provided
+	if event.IncludeAllDayEvents == nil {
+		defaultTrue := true
+		event.IncludeAllDayEvents = &defaultTrue
+	}
+
 	val := validator.New()
 	err = val.Struct(event)
 	if err != nil {
@@ -39,20 +52,6 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 
 	cal := c.Calendar{
 		Logger: logger,
-		TZMap: map[string]string{
-			"Hawaii Standard Time":     "Pacific/Honolulu",
-			"Alaskan Standard Time":    "America/Anchorage",
-			"Alaskan Daylight Time":    "America/Anchorage",
-			"SA Pacific Standard Time": "America/Bogota",
-			"Pacific Standard Time":    "America/Los_Angeles",
-			"Pacific Daylight Time":    "America/Los_Angeles",
-			"Central Standard Time":    "America/Chicago",
-			"Central Daylight Time":    "America/Chicago",
-			"Mountain Standard Time":   "America/Denver",
-			"Mountain Daylight Time":   "America/Denver",
-			"Eastern Standard Time":    "America/New_York",
-			"Eastern Daylight Time":    "America/New_York",
-		},
 	}
 
 	data, err := cal.DownloadCalendar(event.ICSUrl)
@@ -87,10 +86,26 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		}, nil
 	}
 
-	nextEvent, err := cal.NextEvent(events, event.TZ)
+	nextEvent, err := cal.NextEvent(events, event.TZ, event.IncludeAllDayEvents, event.OnlyShowAllDayEvents, event.ShowInProgress)
 	if err != nil {
-		logger.Error("Error", zap.Any("err", err))
-		return GetErrorResponseType(err)
+		//the error here is events is empty, so return an empty response
+			base := t.BaseResponse{
+				Data: nil,
+			}
+			respBytes, err := json.Marshal(base)
+			if err != nil {
+				logger.Error("Error", zap.Any("err", err))
+				return GetErrorResponseType(err)
+			}
+	
+			return Response{
+				StatusCode:      200,
+				IsBase64Encoded: false,
+				Body:            string(respBytes),
+				Headers: map[string]string{
+					"Content-Type": "application/json",
+				},
+			}, nil
 	}
 
 	response := t.BaseResponse{
@@ -107,6 +122,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 				MinutesUntilEnd:   nextEvent.Detail.MinutesUntilEnd,
 				HoursToEnd:        nextEvent.Detail.HoursToEnd,
 				InProgress:        nextEvent.Detail.InProgress,
+				IsAllDay:		   nextEvent.Detail.IsAllDay,
 			},
 		},
 	}

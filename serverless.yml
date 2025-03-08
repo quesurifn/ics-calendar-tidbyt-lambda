@@ -20,9 +20,13 @@ service: ics-tidy-lambda
 # Check out our docs for more details
 frameworkVersion: '3'
 
+# changing from Go to Amazon Linux 2
 provider:
   name: aws
-  runtime: go1.x
+  runtime: provided.al2
+  architecture: arm64
+
+
 
 # you can overwrite defaults here
 #  stage: dev
@@ -51,13 +55,17 @@ provider:
 #    variable1: value1
 
 package:
+  individually: true
   patterns:
-    - '!./**'
+    - '!./*'
     - ./bin/**
 
 functions:
   hello:
-    handler: bin/ics
+    handler: bootstrap
+    package: 
+      artifact: bin/hello.zip
+    #handler: bin/ics
     events:
       - httpApi:
           path: /ics-next-event

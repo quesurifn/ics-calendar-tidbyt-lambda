@@ -1,10 +1,13 @@
 .PHONY: build clean deploy
 
 build:
-	env GOARCH=amd64 GOOS=linux go build -ldflags="-s -w" -o bin/ics ics/main.go
+	env GOARCH=arm64 GOOS=linux go build -ldflags="-s -w" -o bin/bootstrap ics/main.go
 
 clean:
 	rm -rf ./bin ./vendor Gopkg.lock
+	
+zip:
+	zip -j bin/hello.zip bin/bootstrap
 
-deploy: clean build
+deploy: build
 	sls deploy --verbose
